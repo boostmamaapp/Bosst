@@ -1,0 +1,41 @@
+name: Build Flutter APK
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Locate Flutter Project
+        run: |
+          PROJECT_DIR=$(find . -name "pubspec.yaml" -exec dirname {} \;)
+          echo "PROJECT_DIR=$PROJECT_DIR" >> $GITHUB_ENV
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.19.x'
+          channel: 'stable'
+
+      - name: Fix Missing Android Files & Build
+        run: |
+          cd ${{ env.PROJECT_DIR }}
+          
+          if [ ! -f "android/build.gradle" ]; then
+            echo "Android files missing. Generating them..."
+            flutter create . --org com.example.boostmama --platforms=android
+          fi
+
+          flutter pub get
+          flutter build apk --release
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-apk
+          path: '**/build/app/outputs/flutter-apk/app-release.apk'
+          
