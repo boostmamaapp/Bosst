@@ -1,0 +1,39 @@
+name: Build Flutter APK
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract Zip
+        run: |
+          # Find the zip file automatically
+          ZIP_FILE=$(find . -maxdepth 1 -name "*.zip" | head -n 1)
+          echo "Found zip file: $ZIP_FILE"
+          unzip "$ZIP_FILE" -d project
+          # If the zip contains a nested folder, move contents if needed
+          cd project
+          # Find the actual flutter project folder inside
+          FLUTTER_DIR=$(find . -maxdepth 2 -name "pubspec.yaml" -exec dirname {} \;)
+          cd "$FLUTTER_DIR"
+          
+          echo "Building Flutter APK..."
+          flutter pub get
+          flutter build apk --release
+          
+          # Move APK to a known location for artifact upload
+          mkdir -p ../../output
+          cp build/app/outputs/flutter-apk/app-release.apk ../../output/app-release.apk
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-apk
+          path: output/app-release.apk
+          
